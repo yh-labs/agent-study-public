@@ -13,8 +13,8 @@
 프로젝트의 개요와 목표는 PRD.md에 정의되어 있습니다.
 산출물을 작성할 때는 반드시 PRD.md를 먼저 읽고 프로젝트 맥락을 파악하세요.
 
-### 도메인 컨텍스트: 반려동물 건강 기록 모바일 앱
-- 서비스 유형: 반려동물 건강 데이터 트래킹 모바일 앱 (iOS / Android)
+### 도메인 컨텍스트: 반려동물 건강 기록 웹앱
+- 서비스 유형: 반려동물 건강 데이터 트래킹 웹앱 (PWA, 브라우저 기반)
 - 대상 고객: 강아지·고양이 보호자 (20~40대), 노령견·노령묘 보호자, 다두 가정
 - 핵심 키워드: 체중 기록, 음수량, 월간 건강 리포트, 이상 징후 알림
 
@@ -111,14 +111,14 @@ graph TD
 - 형식: `[주차] 산출물명 - 작업 내용` (예: `[W2] 착수보고서 - 초안 작성`)
 - 브랜치 명명: feature/기능명
 
-## Tech Stack (모바일 앱 — V0.42 표준에서 프론트엔드 변경)
+## Tech Stack (웹앱 — MVP 범위)
 
 | 영역 | 기술 | 비고 |
 |------|------|------|
-| Frontend | React Native + Expo | iOS 16+ / Android 10+ |
-| Backend | Express.js (Next.js API Routes M1~M4) | Vercel 통합 배포 |
+| Frontend | React + Vite | PWA (Service Worker), 최신 브라우저 지원 |
+| Backend | Express.js | Vercel 통합 배포 |
 | Database | PostgreSQL | Supabase 권장 |
-| Deploy | Vercel (API) + App Store / Google Play | |
+| Deploy | Vercel (프론트 + API 통합) | 앱스토어 배포 없음 |
 | CI/CD | GitHub Actions | |
 
 ## NotebookLM 연동
