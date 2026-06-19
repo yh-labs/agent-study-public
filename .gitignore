@@ -20,3 +20,6 @@ Thumbs.db
 
 # AP-Lecture framework (external dependency - re-install via setup.sh)
 AP-Lecture/
+
+# 리포트 생성물 (로컬 전용 — 커밋·push 제외)
+05.리포트/
