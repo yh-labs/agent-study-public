@@ -1,5 +1,7 @@
-import { useApp } from '../context/AppContext';
-import { upsert, TODAY } from '../utils/helpers';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { upsert, TODAY } from '@/utils/helpers';
 
 function seg(active) {
   return active

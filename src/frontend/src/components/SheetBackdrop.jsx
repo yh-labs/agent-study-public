@@ -1,4 +1,6 @@
-import { useApp } from '../context/AppContext';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 
 export default function SheetBackdrop({ children }) {
   const { set } = useApp();

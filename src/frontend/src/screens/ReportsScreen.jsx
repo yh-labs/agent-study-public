@@ -1,4 +1,6 @@
-import { useApp } from '../context/AppContext';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 
 const REPORT_INFO = {
   '2026-05': { bar: '2026년 5월 리포트', avgW: '4.9', dW: '▼ 0.1 kg', dWup: false, avgWa: '138', dWa: '▲ 8 ml', dWaup: true, anom: [{ d: '5월 12일', p: '7일 평균 대비 -11.2%' }], wcov: '28일 / 31일', wacov: '25일 / 31일' },

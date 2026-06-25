@@ -1,5 +1,7 @@
-import { useApp } from '../context/AppContext';
-import { fmtTime } from '../utils/helpers';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { fmtTime } from '@/utils/helpers';
 
 function Toggle({ on, onToggle }) {
   return (

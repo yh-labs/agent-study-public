@@ -1,3 +1,5 @@
+'use client';
+
 import { mmdd } from './helpers';
 
 export function LineChart({ series, color = '#028090', gradientId, anomalySet }) {

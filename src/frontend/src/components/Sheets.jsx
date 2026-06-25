@@ -1,4 +1,6 @@
-import { useApp } from '../context/AppContext';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 import SheetBackdrop from './SheetBackdrop';
 
 export function RecordSheet() {

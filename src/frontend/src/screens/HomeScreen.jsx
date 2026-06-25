@@ -1,6 +1,8 @@
-import { useApp } from '../context/AppContext';
-import { anomalySet } from '../utils/helpers';
-import { LineChart } from '../utils/chart';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { anomalySet } from '@/utils/helpers';
+import { LineChart } from '@/utils/chart';
 
 function SegBtn({ seg, onClick, children }) {
   return (

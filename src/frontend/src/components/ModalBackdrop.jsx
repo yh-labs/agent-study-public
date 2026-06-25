@@ -1,3 +1,5 @@
+'use client';
+
 export default function ModalBackdrop({ children, onClose }) {
   return (
     <div

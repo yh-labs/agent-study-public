@@ -1,3 +1,5 @@
+'use client';
+
 const pad = (n) => String(n).padStart(2, '0');
 
 export const ymd = (d) =>

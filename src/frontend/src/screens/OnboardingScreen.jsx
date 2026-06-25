@@ -1,4 +1,6 @@
-import { useApp } from '../context/AppContext';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 
 function ToggleBtn({ active, onClick, children }) {
   const chip = active

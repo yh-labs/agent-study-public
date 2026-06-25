@@ -1,6 +1,8 @@
-import { useApp } from '../context/AppContext';
-import { anomalySet, mmdd } from '../utils/helpers';
-import { LineChart } from '../utils/chart';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { anomalySet, mmdd } from '@/utils/helpers';
+import { LineChart } from '@/utils/chart';
 
 function seg(active) {
   return active

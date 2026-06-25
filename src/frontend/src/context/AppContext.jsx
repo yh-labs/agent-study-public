@@ -1,5 +1,7 @@
+'use client';
+
 import { createContext, useContext, useReducer, useRef, useCallback } from 'react';
-import { generateDemoData, upsert, TODAY } from '../utils/helpers';
+import { generateDemoData, upsert, TODAY } from '@/utils/helpers';
 
 const { weights, waters } = generateDemoData();
 

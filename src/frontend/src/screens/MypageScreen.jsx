@@ -1,6 +1,8 @@
-import { useApp } from '../context/AppContext';
-import { ageOf } from '../utils/helpers';
-import ModalBackdrop from '../components/ModalBackdrop';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { ageOf } from '@/utils/helpers';
+import ModalBackdrop from '@/components/ModalBackdrop';
 
 function ToggleBtn({ active, onClick, children }) {
   const c = active

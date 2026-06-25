@@ -1,4 +1,6 @@
-import { useApp } from '../context/AppContext';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 
 const NAV_SCREENS = ['home', 'whist', 'reports', 'detail', 'settings', 'mypage'];
 const TAB_FOR = { home: 'home', whist: 'home', reports: 'reports', detail: 'reports', settings: 'settings', mypage: 'my' };

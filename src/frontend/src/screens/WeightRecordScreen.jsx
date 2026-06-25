@@ -1,6 +1,8 @@
-import { useApp } from '../context/AppContext';
-import { TODAY, upsert } from '../utils/helpers';
-import ModalBackdrop from '../components/ModalBackdrop';
+'use client';
+
+import { useApp } from '@/context/AppContext';
+import { TODAY, upsert } from '@/utils/helpers';
+import ModalBackdrop from '@/components/ModalBackdrop';
 
 const PAD_STYLE = {
   height: 46,
