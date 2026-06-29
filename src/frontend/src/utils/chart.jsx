@@ -3,19 +3,21 @@
 import { mmdd } from './helpers';
 
 export function LineChart({ series, color = '#028090', gradientId, anomalySet }) {
-  if (!series || series.length < 2) {
+  if (!series || series.length === 0) {
     return (
-      <div
-        style={{
-          height: 150,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#CBD5E1',
-          fontSize: 13,
-        }}
-      >
-        데이터가 부족해요
+      <div style={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1', fontSize: 13 }}>
+        체중을 기록하면 추이를 볼 수 있어요
+      </div>
+    );
+  }
+
+  if (series.length === 1) {
+    return (
+      <div style={{ height: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: color }} />
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#1E293B' }}>{series[0].value.toFixed(1)} kg</div>
+        <div style={{ fontSize: 12, color: '#94A3B8' }}>{series[0].date}</div>
+        <div style={{ fontSize: 12, color: '#CBD5E1', marginTop: 4 }}>기록이 쌓이면 추이 차트가 표시됩니다</div>
       </div>
     );
   }

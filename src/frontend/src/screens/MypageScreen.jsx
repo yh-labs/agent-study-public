@@ -1,8 +1,10 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { ageOf } from '@/utils/helpers';
 import ModalBackdrop from '@/components/ModalBackdrop';
+import { supabase } from '@/lib/supabase-client';
 
 function ToggleBtn({ active, onClick, children }) {
   const c = active
@@ -31,13 +33,58 @@ export default function MypageScreen() {
   const { state, set, nav, showToast } = useApp();
   const { modal } = state;
   const e = state.edit || state.profile;
+  const fileInputRef = useRef(null);
+  const [photoPreview, setPhotoPreview] = useState(e.photoUrl || null);
+  const [saving, setSaving] = useState(false);
 
   const update = (field) => (ev) => set({ edit: { ...e, [field]: ev.target.value } });
   const pick = (field, val) => set({ edit: { ...e, [field]: val } });
 
-  const save = () => {
-    set({ profile: { ...e } });
-    showToast('#16A34A', '저장 완료');
+  const handlePhotoChange = async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/${state.petId}.${ext}`;
+    const { error } = await supabase.storage.from('pet-photos').upload(path, file, { upsert: true });
+    if (error) { showToast('#DC2626', '사진 업로드 실패'); return; }
+    const { data: urlData } = supabase.storage.from('pet-photos').getPublicUrl(path);
+
+    await fetch(`/api/pets/${state.petId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.token}` },
+      body: JSON.stringify({ photo_url: urlData.publicUrl }),
+    });
+    set({ edit: { ...e, photoUrl: urlData.publicUrl }, profile: { ...state.profile, photoUrl: urlData.publicUrl } });
+    showToast('#16A34A', '사진이 업데이트되었습니다');
+  };
+
+  const save = async () => {
+    if (!e.name?.trim()) { showToast('#DC2626', '이름을 입력해주세요'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pets/${state.petId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.token}` },
+        body: JSON.stringify({
+          name: e.name.trim(),
+          species: e.species,
+          breed: e.breed || null,
+          birth_date: e.birth || null,
+          gender: e.sex || null,
+          is_neutered: e.neutered === 'yes',
+        }),
+      });
+      if (!res.ok) throw new Error('저장 실패');
+      set({ profile: { ...e } });
+      showToast('#16A34A', '저장 완료');
+    } catch {
+      showToast('#DC2626', '저장에 실패했습니다');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -53,12 +100,18 @@ export default function MypageScreen() {
         {/* 프로필 아바타 */}
         <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 24px' }}>
           <div style={{ position: 'relative' }}>
-            <div style={{ width: 96, height: 96, borderRadius: '50%', background: 'linear-gradient(135deg, #02C39A, #028090)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 36 }}>
-              {(e.name || '초')[0]}
+            <div style={{ width: 96, height: 96, borderRadius: '50%', background: 'linear-gradient(135deg, #02C39A, #028090)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 36, overflow: 'hidden' }}>
+              {photoPreview
+                ? <img src={photoPreview} alt="pet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : (e.name || '초')[0]}
             </div>
-            <button style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: '50%', background: '#fff', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: '50%', background: '#fff', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={2} strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" /></svg>
             </button>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
           </div>
         </div>
 
@@ -96,8 +149,8 @@ export default function MypageScreen() {
           <ToggleBtn active={e.neutered === 'no'} onClick={() => pick('neutered', 'no')}>안 했어요</ToggleBtn>
         </div>
 
-        <button onClick={save} style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}>
-          저장하기
+        <button onClick={save} disabled={saving} style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: saving ? '#94A3B8' : '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', marginBottom: 16 }}>
+          {saving ? '저장 중...' : '저장하기'}
         </button>
         <button onClick={() => set({ modal: 'delete' })} style={{ width: '100%', height: 44, border: 'none', background: 'none', color: '#DC2626', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
           프로필 삭제

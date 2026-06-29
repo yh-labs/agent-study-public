@@ -23,3 +23,8 @@ AP-Lecture/
 
 # 리포트 생성물 (로컬 전용 — 커밋·push 제외)
 05.리포트/
+
+# Playwright
+src/frontend/test-results/
+src/frontend/tests/e2e/screenshots/
+tests/e2e/

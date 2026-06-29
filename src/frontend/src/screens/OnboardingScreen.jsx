@@ -1,6 +1,8 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase-client';
 
 function ToggleBtn({ active, onClick, children }) {
   const chip = active
@@ -36,6 +38,7 @@ const inputStyle = {
   color: '#1E293B',
   outline: 'none',
   marginBottom: 20,
+  boxSizing: 'border-box',
 };
 
 function Label({ required, optional, children }) {
@@ -49,21 +52,116 @@ function Label({ required, optional, children }) {
 }
 
 export default function OnboardingScreen() {
-  const { state, set, showToast } = useApp();
+  const { state, set, nav, showToast } = useApp();
   const onb = state.onb;
+  const [loading, setLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const fileInputRef = useRef(null);
 
-  const handleStart = () => {
-    const nm = onb.name.trim() || '초코';
-    const profile = {
-      name: nm,
-      species: onb.species || 'dog',
-      breed: onb.breed || '말티즈',
-      birth: onb.birth || '2011.03.15',
-      sex: onb.sex || 'male',
-      neutered: onb.neutered || 'yes',
-    };
-    set({ profile, screen: 'home' });
-    showToast('#16A34A', nm + ' 등록이 완료되었어요');
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async (petId) => {
+    if (!photoFile) return null;
+    const ext = photoFile.name.split('.').pop();
+    const path = `${auth.user.id}/${petId}.${ext}`;
+    const { error } = await supabase.storage
+      .from('pet-photos')
+      .upload(path, photoFile, { upsert: true });
+    if (error) return null;
+    const { data } = supabase.storage.from('pet-photos').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleStart = async () => {
+    const name = onb.name.trim();
+    if (!name) {
+      showToast('#DC2626', '이름을 입력해주세요');
+      return;
+    }
+    if (!onb.species) {
+      showToast('#DC2626', '종을 선택해주세요');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('인증 정보가 없습니다');
+
+      const body = {
+        name,
+        species: onb.species,
+        breed: onb.breed.trim() || null,
+        birth_date: onb.birth.trim() || null,
+        gender: onb.sex || null,
+        is_neutered: onb.neutered === 'yes',
+        photo_url: null,
+      };
+
+      const res = await fetch('/api/pets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? '등록 실패');
+
+      const pet = json.data;
+
+      // 사진이 있으면 업로드 후 pet 업데이트
+      let photoUrl = null;
+      if (photoFile) {
+        const ext = photoFile.name.split('.').pop();
+        const { data: { user } } = await supabase.auth.getUser();
+        const path = `${user.id}/${pet.id}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('pet-photos')
+          .upload(path, photoFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('pet-photos').getPublicUrl(path);
+          photoUrl = urlData.publicUrl;
+          await fetch(`/api/pets/${pet.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ photo_url: photoUrl }),
+          });
+        }
+      }
+
+      set({
+        profile: {
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed ?? '',
+          birth: pet.birth_date ?? '',
+          sex: pet.gender ?? '',
+          neutered: pet.is_neutered ? 'yes' : 'no',
+          photoUrl,
+        },
+        petId: pet.id,
+        token,
+      });
+      showToast('#16A34A', name + ' 등록이 완료되었어요');
+      nav('home');
+    } catch (e) {
+      showToast('#DC2626', e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const update = (field) => (e) => set({ onb: { ...onb, [field]: e.target.value } });
@@ -81,19 +179,34 @@ export default function OnboardingScreen() {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 24px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 22px' }}>
           <div
+            onClick={() => fileInputRef.current?.click()}
             style={{
               width: 96, height: 96, borderRadius: '50%',
-              background: '#F1F5F9', border: '2px dashed #CBD5E1',
+              background: photoPreview ? 'transparent' : '#F1F5F9',
+              border: photoPreview ? 'none' : '2px dashed #CBD5E1',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 4, cursor: 'pointer', color: '#64748B',
+              gap: 4, cursor: 'pointer', color: '#64748B', overflow: 'hidden',
             }}
           >
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2Z" />
-              <circle cx={12} cy={13} r={3.5} />
-            </svg>
-            <span style={{ fontSize: 11 }}>사진 추가</span>
+            {photoPreview ? (
+              <img src={photoPreview} alt="pet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <>
+                <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2Z" />
+                  <circle cx={12} cy={13} r={3.5} />
+                </svg>
+                <span style={{ fontSize: 11 }}>사진 추가</span>
+              </>
+            )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handlePhotoChange}
+          />
         </div>
 
         <Label required>이름</Label>
@@ -148,12 +261,15 @@ export default function OnboardingScreen() {
       <div style={{ flexShrink: 0, padding: '12px 24px 24px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9' }}>
         <button
           onClick={handleStart}
+          disabled={loading}
           style={{
             width: '100%', height: 52, border: 'none', borderRadius: 14,
-            background: '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer',
+            background: loading ? '#94A3B8' : '#028090',
+            color: '#fff', fontSize: 16, fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
-          시작하기
+          {loading ? '저장 중...' : '시작하기'}
         </button>
       </div>
     </div>

@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { TODAY, upsert } from '@/utils/helpers';
+import { TODAY } from '@/utils/helpers';
 import ModalBackdrop from '@/components/ModalBackdrop';
 
 const PAD_STYLE = {
@@ -16,11 +17,12 @@ const PAD_STYLE = {
 };
 
 export default function WeightRecordScreen() {
-  const { state, set, nav, showToast } = useApp();
+  const { state, set, nav, showToast, loadPetData } = useApp();
   const { weights, wValue, modal } = state;
+  const [saving, setSaving] = useState(false);
 
-  const lastW = weights[weights.length - 1].value;
-  const prevW = weights[weights.length - 2]?.value;
+  const lastW = weights.length > 0 ? weights[weights.length - 1].value : null;
+  const prevW = weights.length >= 2 ? weights[weights.length - 2].value : null;
 
   const addDigit = (d) => {
     let v = wValue;
@@ -48,15 +50,38 @@ export default function WeightRecordScreen() {
     commit(val);
   };
 
-  const commit = (val) => {
-    const ws = upsert(weights, TODAY, val);
-    set({ weights: ws, modal: null });
-    showToast('#16A34A', '기록이 저장되었습니다');
-    nav('home');
+  const commit = async (val) => {
+    setSaving(true);
+    set({ modal: null });
+    try {
+      const res = await fetch(`/api/pets/${state.petId}/weights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${state.token}`,
+        },
+        body: JSON.stringify({ recorded_date: TODAY, weight_kg: val }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? '저장 실패');
+
+      await loadPetData(state.token, state.petId);
+
+      if (json.data?.is_anomaly) {
+        showToast('#D97706', '체중 변화가 평소보다 큽니다. 확인해보세요');
+      } else {
+        showToast('#16A34A', '기록이 저장되었습니다');
+      }
+      nav('home');
+    } catch (e) {
+      showToast('#DC2626', e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const prevDelta = (() => {
-    if (!prevW) return null;
+    if (lastW == null || prevW == null) return null;
     const d = lastW - prevW;
     const pc = (d / prevW) * 100;
     return {
@@ -78,20 +103,19 @@ export default function WeightRecordScreen() {
       {/* 본문 */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 20px 16px' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>날짜</div>
-        <div style={{ height: 48, border: '1px solid #E2E8F0', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#fff', marginBottom: 22, color: '#1E293B', fontSize: 15 }}>
-          2026년 6월 22일 (오늘)
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={1.8} strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
+        <div style={{ height: 48, border: '1px solid #E2E8F0', borderRadius: 12, display: 'flex', alignItems: 'center', padding: '0 16px', background: '#fff', marginBottom: 22, color: '#1E293B', fontSize: 15 }}>
+          오늘 ({TODAY})
         </div>
 
         <div style={{ textAlign: 'center', padding: '14px 0 6px' }}>
           <span style={{ fontSize: 60, fontWeight: 700, color: '#1E293B', letterSpacing: '-1px' }}>{wValue || '0'}</span>
           <span style={{ fontSize: 22, color: '#64748B', fontWeight: 600, marginLeft: 6 }}>kg</span>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 12, color: '#D97706', marginBottom: 18 }}>
-          권장 체중 범위: {(lastW - 0.8).toFixed(1)} ~ {(lastW + 0.7).toFixed(1)} kg
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginBottom: 18 }}>
+          {lastW != null ? `최근 기록: ${lastW.toFixed(1)} kg` : '첫 번째 체중을 기록해보세요'}
         </div>
 
-        {prevW && prevDelta && (
+        {prevW != null && prevDelta && (
           <div style={{ background: '#F1F5F9', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: 12, color: '#64748B' }}>이전 기록 · {weights[weights.length - 2].date}</div>
@@ -119,9 +143,10 @@ export default function WeightRecordScreen() {
         </div>
         <button
           onClick={save}
-          style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}
+          disabled={saving}
+          style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: saving ? '#94A3B8' : '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}
         >
-          기록 완료
+          {saving ? '저장 중...' : '기록 완료'}
         </button>
       </div>
 

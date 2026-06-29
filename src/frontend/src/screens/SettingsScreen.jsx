@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { fmtTime } from '@/utils/helpers';
+import { supabase } from '@/lib/supabase-client';
+import ModalBackdrop from '@/components/ModalBackdrop';
 
 function Toggle({ on, onToggle }) {
   return (
@@ -46,11 +49,38 @@ const chevron = (
 export default function SettingsScreen() {
   const { state, set, nav, showToast } = useApp();
   const { settings } = state;
+  const [modal, setModal] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const toggle = (key) => set({ settings: { ...settings, [key]: !settings[key] } });
   const openTime = () => {
     const [h, m] = settings.reminderTime.split(':');
     set({ sheet: 'time', pickH: h, pickM: m });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    set({ token: null, petId: null, weights: [], waters: [] });
+    nav('login');
+  };
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${state.token}` },
+      });
+      if (!res.ok) throw new Error('탈퇴 처리 실패');
+      await supabase.auth.signOut();
+      set({ token: null, petId: null, weights: [], waters: [] });
+      nav('login');
+    } catch {
+      showToast('#DC2626', '탈퇴 처리 중 오류가 발생했습니다');
+    } finally {
+      setWithdrawing(false);
+      setModal(null);
+    }
   };
 
   return (
@@ -62,19 +92,33 @@ export default function SettingsScreen() {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 24px' }}>
         <SectionLabel>알림</SectionLabel>
         <SectionCard>
-          <SettingRow label="기록 리마인더" right={<Toggle on={settings.reminder} onToggle={() => toggle('reminder')} />} />
-          {settings.reminder && (
-            <SettingRow
-              label="리마인더 시간"
-              right={
-                <button onClick={openTime} style={{ border: 'none', background: '#F1F5F9', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: '#028090', cursor: 'pointer' }}>
-                  {fmtTime(settings.reminderTime)}
-                </button>
-              }
-            />
-          )}
-          <SettingRow label="이상 징후 알림" right={<Toggle on={settings.anomaly} onToggle={() => toggle('anomaly')} />} />
-          <SettingRow label="리포트 생성 알림" right={<Toggle on={settings.report} onToggle={() => toggle('report')} />} />
+          <SettingRow
+            label="기록 리마인더"
+            right={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#94A3B8' }}>v1.1 예정</span>
+                <Toggle on={false} onToggle={() => {}} />
+              </div>
+            }
+          />
+          <SettingRow
+            label="이상 징후 알림"
+            right={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#94A3B8' }}>앱 내 자동 표시</span>
+                <Toggle on={true} onToggle={() => {}} />
+              </div>
+            }
+          />
+          <SettingRow
+            label="리포트 생성 알림"
+            right={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#94A3B8' }}>v1.1 예정</span>
+                <Toggle on={false} onToggle={() => {}} />
+              </div>
+            }
+          />
         </SectionCard>
 
         <SectionLabel>기록 설정</SectionLabel>
@@ -98,14 +142,42 @@ export default function SettingsScreen() {
 
         <SectionLabel>계정</SectionLabel>
         <SectionCard>
-          <button onClick={() => { showToast('#028090', '로그아웃되었습니다'); nav('login'); }} style={textRowBtn}>
+          <button onClick={() => setModal('logout')} style={textRowBtn}>
             <span>로그아웃</span>
           </button>
-          <button onClick={() => showToast('#DC2626', '회원 탈퇴는 고객센터를 통해 진행돼요')} style={{ ...textRowBtn, color: '#DC2626' }}>
+          <button onClick={() => setModal('withdraw')} style={{ ...textRowBtn, color: '#DC2626', borderBottom: 'none' }}>
             <span>회원 탈퇴</span>
           </button>
         </SectionCard>
       </div>
+
+      {modal === 'logout' && (
+        <ModalBackdrop onClose={() => setModal(null)}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#1E293B', marginBottom: 10 }}>로그아웃</div>
+          <div style={{ fontSize: 14, color: '#64748B', lineHeight: 1.5, marginBottom: 20 }}>
+            로그아웃 하시겠어요?
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setModal(null)} style={cancelBtn}>취소</button>
+            <button onClick={handleLogout} style={confirmBtn}>로그아웃</button>
+          </div>
+        </ModalBackdrop>
+      )}
+
+      {modal === 'withdraw' && (
+        <ModalBackdrop onClose={() => setModal(null)}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#1E293B', marginBottom: 10 }}>회원 탈퇴</div>
+          <div style={{ fontSize: 14, color: '#64748B', lineHeight: 1.5, marginBottom: 20 }}>
+            탈퇴하면 모든 기록이 삭제되며 복구할 수 없습니다. 정말 탈퇴하시겠어요?
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setModal(null)} style={cancelBtn}>취소</button>
+            <button onClick={handleWithdraw} disabled={withdrawing} style={{ ...confirmBtn, background: '#DC2626', opacity: withdrawing ? 0.6 : 1 }}>
+              {withdrawing ? '처리 중...' : '탈퇴'}
+            </button>
+          </div>
+        </ModalBackdrop>
+      )}
     </div>
   );
 }
@@ -114,4 +186,14 @@ const textRowBtn = {
   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
   fontSize: 14, color: '#1E293B', borderBottom: '1px solid #F1F5F9',
+};
+
+const cancelBtn = {
+  flex: 1, height: 48, border: '1px solid #E2E8F0', borderRadius: 12,
+  background: '#fff', color: '#64748B', fontWeight: 600, cursor: 'pointer', fontSize: 15,
+};
+
+const confirmBtn = {
+  flex: 1, height: 48, border: 'none', borderRadius: 12,
+  background: '#028090', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 15,
 };

@@ -1,9 +1,17 @@
 'use client';
 
-import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase-client';
+
+async function signInWith(provider) {
+  await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+}
 
 export default function LoginScreen() {
-  const { nav } = useApp();
 
   return (
     <div
@@ -53,7 +61,7 @@ export default function LoginScreen() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <button
-          onClick={() => nav('onb')}
+          onClick={() => signInWith('kakao')}
           style={{
             height: 52,
             border: 'none',
@@ -75,7 +83,7 @@ export default function LoginScreen() {
           카카오로 시작하기
         </button>
         <button
-          onClick={() => nav('onb')}
+          onClick={() => signInWith('google')}
           style={{
             height: 52,
             border: '1px solid #E2E8F0',

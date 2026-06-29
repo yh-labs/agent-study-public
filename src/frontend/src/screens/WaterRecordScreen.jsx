@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { upsert, TODAY } from '@/utils/helpers';
+import { TODAY } from '@/utils/helpers';
 
 function seg(active) {
   return active
@@ -10,21 +11,39 @@ function seg(active) {
 }
 
 export default function WaterRecordScreen() {
-  const { state, set, nav, showToast } = useApp();
+  const { state, set, nav, showToast, loadPetData } = useApp();
   const { waters, waterMode, waterValue, bowlTimes, bowlRemain, settings } = state;
+  const [saving, setSaving] = useState(false);
 
-  const lastWa = waters[waters.length - 1].value;
-  const lastW = state.weights[state.weights.length - 1].value;
-  const wRecLow = Math.round(lastW * 27);
-  const wRecHigh = Math.round(lastW * 35.4);
+  const lastWa = waters.length > 0 ? waters[waters.length - 1].value : null;
+  const lastW = state.weights.length > 0 ? state.weights[state.weights.length - 1].value : null;
+  const wRecLow = lastW != null ? Math.round(lastW * 27) : 0;
+  const wRecHigh = lastW != null ? Math.round(lastW * 35.4) : 0;
   const waterAuto = Math.max(0, bowlTimes * settings.bowlCap - (parseInt(bowlRemain) || 0));
 
-  const save = () => {
+  const save = async () => {
     const val = waterMode === 'direct' ? waterValue : waterAuto;
-    const ws = upsert(waters, TODAY, val);
-    set({ waters: ws });
-    showToast('#16A34A', '기록이 저장되었습니다');
-    nav('home');
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pets/${state.petId}/water-logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${state.token}`,
+        },
+        body: JSON.stringify({ recorded_date: TODAY, amount_ml: val }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? '저장 실패');
+
+      await loadPetData(state.token, state.petId);
+      showToast('#16A34A', '기록이 저장되었습니다');
+      nav('home');
+    } catch (e) {
+      showToast('#DC2626', e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const mDirect = seg(waterMode === 'direct');
@@ -43,15 +62,14 @@ export default function WaterRecordScreen() {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 20px 16px' }}>
         {/* 날짜 */}
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>날짜</div>
-        <div style={{ height: 48, border: '1px solid #E2E8F0', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#fff', marginBottom: 22, color: '#1E293B', fontSize: 15 }}>
-          2026년 6월 22일 (오늘)
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={1.8} strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
+        <div style={{ height: 48, border: '1px solid #E2E8F0', borderRadius: 12, display: 'flex', alignItems: 'center', padding: '0 16px', background: '#fff', marginBottom: 22, color: '#1E293B', fontSize: 15 }}>
+          오늘 ({TODAY})
         </div>
 
         {/* 모드 탭 */}
         <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 12, padding: 4, marginBottom: 22 }}>
           <button onClick={() => set({ waterMode: 'direct' })} style={{ flex: 1, height: 36, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, background: mDirect.bg, color: mDirect.col, fontWeight: mDirect.fw, boxShadow: mDirect.sh }}>직접 입력</button>
-          <button onClick={() => set({ waterMode: 'bowl' })} style={{ flex: 1, height: 36, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, background: mBowl.bg, color: mBowl.col, fontWeight: mBowl.fw, boxShadow: mBowl.sh }}>물그릇 기준</button>
+          <button onClick={() => set({ waterMode: 'bowl', bowlTimes: 1, bowlRemain: '0' })} style={{ flex: 1, height: 36, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, background: mBowl.bg, color: mBowl.col, fontWeight: mBowl.fw, boxShadow: mBowl.sh }}>물그릇 기준</button>
         </div>
 
         {waterMode === 'direct' ? (
@@ -92,7 +110,8 @@ export default function WaterRecordScreen() {
               <input
                 type="number"
                 value={bowlRemain}
-                onChange={(e) => set({ bowlRemain: e.target.value.replace(/[^0-9]/g, '') })}
+                onChange={(e) => set({ bowlRemain: String(Math.round(parseInt(e.target.value.replace(/[^0-9]/g, '') || '0') / 10) * 10) })}
+                step={10}
                 placeholder="0"
                 style={{ width: '100%', height: 50, border: '1px solid #E2E8F0', borderRadius: 12, padding: '0 16px', fontSize: 15, color: '#1E293B', outline: 'none' }}
                 onFocus={(e) => (e.target.style.border = '2px solid #028090')}
@@ -113,9 +132,10 @@ export default function WaterRecordScreen() {
       <div style={{ flexShrink: 0, padding: '12px 20px 24px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9' }}>
         <button
           onClick={save}
-          style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}
+          disabled={saving}
+          style={{ width: '100%', height: 52, border: 'none', borderRadius: 14, background: saving ? '#94A3B8' : '#028090', color: '#fff', fontSize: 16, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}
         >
-          기록 완료
+          {saving ? '저장 중...' : '기록 완료'}
         </button>
       </div>
     </div>

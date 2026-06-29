@@ -5,8 +5,8 @@ import SheetBackdrop from './SheetBackdrop';
 
 export function RecordSheet() {
   const { state, set, nav } = useApp();
-  const lastW = state.weights[state.weights.length - 1].value;
-  const lastWa = state.waters[state.waters.length - 1].value;
+  const lastW = state.weights.length > 0 ? state.weights[state.weights.length - 1].value : null;
+  const lastWa = state.waters.length > 0 ? state.waters[state.waters.length - 1].value : null;
 
   if (state.sheet !== 'record') return null;
 
@@ -25,17 +25,17 @@ export function RecordSheet() {
             <path d="M12 7l3 4H9l3-4Z" />
           </svg>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', marginTop: 8 }}>체중</div>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{lastW.toFixed(1)} kg</div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{lastW != null ? lastW.toFixed(1) + ' kg' : '기록 없음'}</div>
         </button>
         <button
-          onClick={() => set({ screen: 'water', sheet: null, waterMode: 'direct', waterValue: lastWa })}
+          onClick={() => set({ screen: 'water', sheet: null, waterMode: 'direct', waterValue: lastWa ?? 0 })}
           style={recordBtnStyle}
         >
           <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="#028090" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 3s6 5.7 6 10a6 6 0 0 1-12 0c0-4.3 6-10 6-10Z" />
           </svg>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1E293B', marginTop: 8 }}>음수량</div>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{lastWa} ml</div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{lastWa != null ? lastWa + ' ml' : '기록 없음'}</div>
         </button>
       </div>
     </SheetBackdrop>
@@ -55,35 +55,19 @@ const recordBtnStyle = {
 };
 
 export function NotifSheet() {
-  const { state, set } = useApp();
+  const { state } = useApp();
   if (state.sheet !== 'notif') return null;
-
-  const notifs = [
-    { id: 1, msg: '오늘 체중 기록을 잊지 마세요!', time: '20:00', color: '#028090' },
-    { id: 2, msg: '초코의 5월 리포트가 생성되었습니다', time: '6월 1일', color: '#16A34A' },
-  ];
 
   return (
     <SheetBackdrop>
       <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 16 }}>알림</div>
-      {notifs.map((n) => (
-        <div
-          key={n.id}
-          style={{
-            padding: '12px 0',
-            borderBottom: '1px solid #F1F5F9',
-            display: 'flex',
-            gap: 12,
-            alignItems: 'flex-start',
-          }}
-        >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: n.color, marginTop: 5, flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#1E293B' }}>{n.msg}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{n.time}</div>
-          </div>
-        </div>
-      ))}
+      <div style={{ padding: '32px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: '#94A3B8' }}>
+        <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+        </svg>
+        <div style={{ fontSize: 14, color: '#64748B', fontWeight: 500 }}>새로운 알림이 없어요</div>
+      </div>
     </SheetBackdrop>
   );
 }

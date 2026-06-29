@@ -1,5 +1,20 @@
-import { getAuthUser, unauthorized, created, err } from '@/lib/auth';
+import { getAuthUser, unauthorized, ok, created, err } from '@/lib/auth';
 import { supabaseForUser } from '@/lib/supabase-server';
+
+export async function GET(request) {
+  const auth = await getAuthUser(request);
+  if (!auth) return unauthorized();
+  const sb = supabaseForUser(auth.token);
+
+  const { data, error } = await sb
+    .from('pets')
+    .select('*')
+    .eq('user_id', auth.user.id)
+    .order('created_at', { ascending: true });
+
+  if (error) return err(500, 'INTERNAL_SERVER_ERROR', error.message);
+  return ok(data);
+}
 
 export async function POST(request) {
   const auth = await getAuthUser(request);

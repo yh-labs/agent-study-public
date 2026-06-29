@@ -30,19 +30,22 @@ export default function HomeScreen() {
   const { state, set, nav, showToast } = useApp();
   const { weights, waters, homeRange, profile } = state;
 
-  const lastW = weights[weights.length - 1].value;
-  const prevW = weights[weights.length - 2].value;
-  const lastWa = waters[waters.length - 1].value;
-  const wDelta = Math.round((lastW - prevW) * 10) / 10;
-  const wRecLow = Math.round(lastW * 27);
-  const wRecHigh = Math.round(lastW * 35.4);
-  const waterBelow = lastWa < wRecLow;
+  const hasWeight = weights.length > 0;
+  const hasWater = waters.length > 0;
+  const lastW = hasWeight ? weights[weights.length - 1].value : null;
+  const prevW = weights.length >= 2 ? weights[weights.length - 2].value : null;
+  const lastWa = hasWater ? waters[waters.length - 1].value : null;
+  const wDelta = lastW != null && prevW != null ? Math.round((lastW - prevW) * 10) / 10 : null;
+  const wRecLow = lastW != null ? Math.round(lastW * 27) : 0;
+  const wRecHigh = lastW != null ? Math.round(lastW * 35.4) : 0;
+  const waterBelow = lastWa != null && lastWa < wRecLow;
   const wAnom = anomalySet(weights);
 
   const homeSeries = weights.slice(-homeRange);
-  const wDeltaColor = wDelta > 0 ? '#16A34A' : wDelta < 0 ? '#DC2626' : '#64748B';
-  const wDeltaText =
-    (wDelta > 0 ? '▲ ' : wDelta < 0 ? '▼ ' : '— ') + Math.abs(wDelta).toFixed(1) + ' kg';
+  const wDeltaColor = wDelta == null ? '#64748B' : wDelta > 0 ? '#16A34A' : wDelta < 0 ? '#DC2626' : '#64748B';
+  const wDeltaText = wDelta == null
+    ? '기록 없음'
+    : (wDelta > 0 ? '▲ ' : wDelta < 0 ? '▼ ' : '— ') + Math.abs(wDelta).toFixed(1) + ' kg';
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', animation: 'petFade .3s ease' }}>
@@ -58,9 +61,12 @@ export default function HomeScreen() {
               background: 'linear-gradient(135deg, #02C39A, #028090)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 700, fontSize: 17,
+              overflow: 'hidden', flexShrink: 0,
             }}
           >
-            {(profile.name || '초')[0]}
+            {profile.photoUrl
+              ? <img src={profile.photoUrl} alt="pet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (profile.name || '초')[0]}
           </div>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#1E293B', lineHeight: 1.2 }}>{profile.name}</div>
@@ -75,7 +81,6 @@ export default function HomeScreen() {
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.7 21a2 2 0 0 1-3.4 0" />
           </svg>
-          <span style={{ position: 'absolute', top: 9, right: 11, width: 8, height: 8, borderRadius: '50%', background: '#DC2626', border: '1.5px solid #F8FAFC' }} />
         </button>
       </div>
 
@@ -97,11 +102,11 @@ export default function HomeScreen() {
               체중
             </div>
             <div>
-              <span style={{ fontSize: 26, fontWeight: 700, color: '#1E293B' }}>{lastW.toFixed(1)}</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: '#1E293B' }}>{lastW != null ? lastW.toFixed(1) : '--'}</span>
               <span style={{ fontSize: 14, color: '#64748B', marginLeft: 3 }}>kg</span>
             </div>
             <div style={{ fontSize: 13, color: wDeltaColor, marginTop: 4, fontWeight: 500 }}>
-              전일 대비 {wDeltaText}
+              {lastW == null ? '아직 기록이 없어요' : wDelta != null ? `전일 대비 ${wDeltaText}` : '전일 기록 없음'}
             </div>
           </button>
 
@@ -116,11 +121,11 @@ export default function HomeScreen() {
               음수
             </div>
             <div>
-              <span style={{ fontSize: 26, fontWeight: 700, color: '#1E293B' }}>{lastWa}</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: '#1E293B' }}>{lastWa ?? '--'}</span>
               <span style={{ fontSize: 14, color: '#64748B', marginLeft: 3 }}>ml</span>
             </div>
             <div style={{ fontSize: 13, color: waterBelow ? '#D97706' : '#64748B', marginTop: 4, fontWeight: 500 }}>
-              권장 {wRecLow}~{wRecHigh} ml
+              {lastW != null ? `권장 ${wRecLow}~${wRecHigh} ml` : '아직 기록이 없어요'}
             </div>
           </button>
         </div>

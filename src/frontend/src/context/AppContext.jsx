@@ -1,9 +1,8 @@
 'use client';
 
-import { createContext, useContext, useReducer, useRef, useCallback } from 'react';
-import { generateDemoData, upsert, TODAY } from '@/utils/helpers';
-
-const { weights, waters } = generateDemoData();
+import { createContext, useContext, useReducer, useRef, useCallback, useEffect } from 'react';
+import { upsert, TODAY, ymd } from '@/utils/helpers';
+import { supabase } from '@/lib/supabase-client';
 
 const initialState = {
   screen: 'login',
@@ -22,8 +21,8 @@ const initialState = {
     neutered: 'yes',
   },
   onb: { name: '', species: '', breed: '', birth: '', sex: '', neutered: '' },
-  weights,
-  waters,
+  weights: [],
+  waters: [],
   homeRange: 30,
   histRange: 30,
   reportMonth: '2026-05',
@@ -43,6 +42,8 @@ const initialState = {
   edit: null,
   pickH: '20',
   pickM: '00',
+  token: null,
+  petId: null,
 };
 
 function reducer(state, action) {
@@ -73,6 +74,72 @@ export function AppProvider({ children }) {
   const set = useCallback((payload) => dispatch({ type: 'SET', payload }), []);
   const nav = useCallback((screen) => dispatch({ type: 'NAV', screen }), []);
 
+  const registerUser = useCallback(async (token) => {
+    await fetch('/api/auth/social', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, []);
+
+  const loadUserPet = useCallback(async (token) => {
+    const res = await fetch('/api/pets', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data?.[0] ?? null;
+  }, []);
+
+  const loadPetData = useCallback(async (token, petId) => {
+    const from = ymd(new Date(Date.now() - 89 * 86400000));
+    const [wRes, waRes] = await Promise.all([
+      fetch(`/api/pets/${petId}/weights?from=${from}`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`/api/pets/${petId}/water-logs?from=${from}`, { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+    const [wJson, waJson] = await Promise.all([wRes.json(), waRes.json()]);
+    const weights = (wJson.data ?? []).map((r) => ({ date: r.recorded_date, value: Number(r.weight_kg) }));
+    const waters = (waJson.data ?? []).map((r) => ({ date: r.recorded_date, value: Number(r.amount_ml) }));
+    set({ weights, waters });
+  }, [set]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const token = session.access_token;
+      await registerUser(token);
+      const pet = await loadUserPet(token);
+      if (pet) {
+        set({ profile: { name: pet.name, species: pet.species, breed: pet.breed ?? '', birth: pet.birth_date ?? '', sex: pet.gender ?? '', neutered: pet.is_neutered ? 'yes' : 'no', photoUrl: pet.photo_url ?? null }, petId: pet.id, token });
+        await loadPetData(token, pet.id);
+        nav('home');
+      } else {
+        set({ token });
+        nav('onb');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        set({ token: null, petId: null });
+        nav('login');
+        return;
+      }
+      const token = session.access_token;
+      await registerUser(token);
+      const pet = await loadUserPet(token);
+      if (pet) {
+        set({ profile: { name: pet.name, species: pet.species, breed: pet.breed ?? '', birth: pet.birth_date ?? '', sex: pet.gender ?? '', neutered: pet.is_neutered ? 'yes' : 'no', photoUrl: pet.photo_url ?? null }, petId: pet.id, token });
+        await loadPetData(token, pet.id);
+        nav('home');
+      } else {
+        set({ token });
+        nav('onb');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [nav, set, registerUser, loadUserPet, loadPetData]);
+
   const showToast = useCallback(
     (bg, msg) => {
       set({ toast: { bg, msg } });
@@ -83,7 +150,7 @@ export function AppProvider({ children }) {
   );
 
   return (
-    <AppContext.Provider value={{ state, set, nav, showToast }}>
+    <AppContext.Provider value={{ state, set, nav, showToast, loadPetData }}>
       {children}
     </AppContext.Provider>
   );
