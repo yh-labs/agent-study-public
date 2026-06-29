@@ -2,8 +2,14 @@
 
 **프로젝트명**: 반려동물 건강 기록 웹앱
 **작성일**: 2026-06-19
-**버전**: v1.0
+**버전**: v1.1
 **참조 문서**: 기능명세서.md, 요구사항정의서.md
+
+> **변경 이력**
+> | 버전 | 일자 | 변경 내용 |
+> |------|------|-----------|
+> | v1.0 | 2026-06-19 | 최초 작성 |
+> | v1.1 | 2026-06-29 | PDF 생성 API, 알림 구독 API → v1.1 추후 구현으로 변경 |
 
 ---
 
@@ -131,13 +137,13 @@ Authorization: Bearer {access_token}
 |--------|-----------|-----------|------|---------|
 | GET | `/api/pets/:id/reports` | 필요 | 리포트 목록 조회 | F-004 |
 | GET | `/api/pets/:id/reports/:year/:month` | 필요 | 특정 월 리포트 상세 조회 | F-004 |
-| POST | `/api/pets/:id/reports/export-pdf` | 필요 | 월간 리포트 PDF 생성 및 다운로드 | F-004 |
+| ~~POST~~ | ~~`/api/pets/:id/reports/export-pdf`~~ | - | ~~월간 리포트 PDF 생성 및 다운로드~~ **[v1.1 추후 구현]** | F-004 |
 
 ### 3.6 알림 설정 (Notifications)
 
 | 메서드 | 엔드포인트 | 인증 필요 | 설명 | 기능 ID |
 |--------|-----------|-----------|------|---------|
-| POST | `/api/notifications/subscribe` | 필요 | 푸시 알림 구독 등록 | F-005 |
+| ~~POST~~ | ~~`/api/notifications/subscribe`~~ | - | ~~푸시 알림 구독 등록~~ **[v1.1 추후 구현 — Web Push]** | F-005 |
 | GET | `/api/notifications/settings` | 필요 | 알림 설정 조회 | F-005 |
 | PATCH | `/api/notifications/settings` | 필요 | 알림 설정 변경 | F-005 |
 
@@ -1052,7 +1058,9 @@ Authorization: Bearer {access_token}
 
 ---
 
-#### POST /api/pets/:id/reports/export-pdf — 월간 리포트 PDF 생성
+#### POST /api/pets/:id/reports/export-pdf — 월간 리포트 PDF 생성 [v1.1 추후 구현]
+
+> Puppeteer/html2pdf 기반 서버사이드 PDF 생성. v1.1에서 구현 예정. 아래 스펙은 참고용으로 보존.
 
 | 항목 | 내용 |
 |------|------|
@@ -1126,7 +1134,9 @@ Authorization: Bearer {access_token}
 
 ---
 
-#### POST /api/notifications/subscribe — 푸시 알림 구독 등록
+#### POST /api/notifications/subscribe — 푸시 알림 구독 등록 [v1.1 추후 구현]
+
+> VAPID 기반 Web Push 구독. v1.1에서 구현 예정. 아래 스펙은 참고용으로 보존.
 
 | 항목 | 내용 |
 |------|------|
