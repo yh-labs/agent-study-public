@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/unit/**/*.test.mjs"]
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -14,8 +19,10 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@jest/globals": "^30.4.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "jest": "^30.4.2",
     "tailwindcss": "^4"
   }
 }
